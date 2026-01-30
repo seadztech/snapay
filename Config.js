@@ -10,6 +10,6 @@ module.exports = {
   MAX_ATTEMPTS: 5,
   PROCESS_POLLING_INTERVAL:
     parseInt(process.env.PROCESS_POLLING_INTERVAL) || 30000,
-  COMPANY_GET_URL: "https://snaveware.com/api/companies",
-  COMPANY_SMS_POST_PATH: "/mtransactions/api/sms",
+  COMPANY_GET_URL: "https://seadztech.co.ke/api/companies",
+  COMPANY_SMS_POST_PATH: "/api/stk/callback",
 };

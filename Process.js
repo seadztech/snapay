@@ -384,7 +384,7 @@ module.exports = class Process {
       return;
     }
 
-    const url = `${company.url}${Config.COMPANY_SMS_POST_PATH}`;
+    const url = `${'jeflo.seadztech.co.ke'}${Config.COMPANY_SMS_POST_PATH}`;
 
     const response = await fetch(url, {
       method: "POST",
