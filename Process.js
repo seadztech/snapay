@@ -383,7 +383,7 @@ module.exports = class Process {
     //   return;
     // }
 
-    const url = `${'jeflo.seadztech.co.ke'}${Config.COMPANY_SMS_POST_PATH}`;
+    const url = `${'https://jeflo.seadztech.co.ke'}${Config.COMPANY_SMS_POST_PATH}`;
     
     // const url = `${'http://192.168.0.64/pharmacy/public'}${Config.COMPANY_SMS_POST_PATH}`;
 
