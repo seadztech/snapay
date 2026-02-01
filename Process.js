@@ -363,28 +363,29 @@ module.exports = class Process {
 
   static async send(sms) {
     // console.log(sms);
-    const company = await this.getCompany(sms.device.companySID);
-
+    // const company = await this.getCompany(sms.device.companySID);
     // console.log("company: ", company);
 
-    if (!company) {
-      sms.status = "PROCESSED";
-      sms.results = "FAILED";
-      sms.error = "Company Not Found";
+    // if (!company) {
+    //   sms.status = "PROCESSED";
+    //   sms.results = "FAILED";
+    //   sms.error = "Company Not Found";
 
-      await SMS.updateOne(
-        { _id: sms._id },
-        {
-          status: sms.status,
-          results: sms.results,
-          error: sms.error,
-        }
-      );
-      // await sms.save();
-      return;
-    }
+    //   await SMS.updateOne(
+    //     { _id: sms._id },
+    //     {
+    //       status: sms.status,
+    //       results: sms.results,
+    //       error: sms.error,
+    //     }
+    //   );
+    //   // await sms.save();
+    //   return;
+    // }
 
     const url = `${'jeflo.seadztech.co.ke'}${Config.COMPANY_SMS_POST_PATH}`;
+    
+    // const url = `${'http://192.168.0.64/pharmacy/public'}${Config.COMPANY_SMS_POST_PATH}`;
 
     const response = await fetch(url, {
       method: "POST",

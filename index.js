@@ -39,8 +39,8 @@ connect();
 
 mongoose.connection.on("connected", () => {
   console.log("database connected successfully");
-  app.listen(PORT, () => {
-    console.log("snapay listening on port ", PORT);
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`snapay listening on http://0.0.0.0:${PORT}`);
   });
 });
 
