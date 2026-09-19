@@ -14,7 +14,9 @@ module.exports = class CallbacksController {
       console.log("New SMS: ", JSON.stringify(body));
 
       const device = await Device.findById(deviceId);
+      const devices = await Device.find();
 
+      
       if (!device) {
         RequestHandler.throwError(400, "Invalid Device")();
       }
@@ -27,7 +29,7 @@ module.exports = class CallbacksController {
             sender: sender,
             message: message,
             adapter: adapter,
-            // deviceId: deviceId,
+            deviceId: deviceId,
           });
 
           if (!sameSms) {
@@ -41,8 +43,12 @@ module.exports = class CallbacksController {
               device: deviceId,
             });
 
+            console.log("sms saved: ", sms);
+
             sms.device = device;
             smsQueue.add(sms._id, sms);
+          } else {
+            console.log("Same sms found...", sameSms)
           }
         } catch (error) {
           Logger.error(JSON.stringify({ error, sms }));

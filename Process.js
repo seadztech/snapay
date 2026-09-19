@@ -81,13 +81,13 @@ module.exports = class Process {
               status: sms.status,
               results: sms.results,
               error: sms.error,
-            }
+            },
           );
 
           // await sms.save();
         }
       },
-      { connection }
+      { connection },
     );
 
     setInterval(async () => {
@@ -95,7 +95,7 @@ module.exports = class Process {
       const pending =
         (await smsQueue.getWaitingCount()) + (await smsQueue.getActiveCount());
 
-      if (pending > 0) {
+      if (pending == 0) {
         const smss = await Process.query();
         smss.forEach((sms) => smsQueue.add(sms._id, sms));
       }
@@ -118,6 +118,10 @@ module.exports = class Process {
 
   static async process(sms) {
     switch (sms.adapter) {
+      case "MPESA-DEPOSIT":
+        Process.processMpesaDeposit(sms);
+
+        break;
       case "MPESA-TILL":
         Process.processMpesaTill(sms);
 
@@ -146,13 +150,54 @@ module.exports = class Process {
             status: sms.status,
             results: sms.results,
             error: sms.error,
-          }
+          },
         );
         // await sms.save();
         break;
     }
   }
 
+  static async processMpesaDeposit(sms) {
+    let results = Adapters.MpesaDeposit(sms.message);
+
+    sms.reference = results.reference;
+    sms.amount = results.amount;
+    sms.phoneNumber = results.senderPhone;
+    sms.senderName = results.senderName;
+    sms.transactionTime = results.transactionTime;
+    sms.error = results.error;
+
+    // await sms.save();
+
+    await SMS.updateOne(
+      { _id: sms._id },
+      {
+        reference: sms.reference,
+        amount: sms.amount,
+        phoneNumber: sms.phoneNumber,
+        senderName: sms.senderName,
+        transactionTime: sms.transactionTime,
+        error: sms.error,
+      },
+    );
+
+    if (sms.reference && sms.amount && !sms.error) {
+      Process.send(sms);
+    } else {
+      sms.status = "PROCESSED";
+      sms.results = "FAILED";
+
+      await SMS.updateOne(
+        { _id: sms._id },
+        {
+          status: sms.status,
+          results: sms.results,
+        },
+      );
+
+      // const saved = await sms.save();
+    }
+  }
   static async processMpesaTill(sms) {
     let results = Adapters.MpesaTill(sms.message);
 
@@ -174,7 +219,7 @@ module.exports = class Process {
         senderName: sms.senderName,
         transactionTime: sms.transactionTime,
         error: sms.error,
-      }
+      },
     );
 
     if (sms.reference && sms.amount && !sms.error) {
@@ -188,14 +233,61 @@ module.exports = class Process {
         {
           status: sms.status,
           results: sms.results,
-        }
+        },
       );
 
       // const saved = await sms.save();
     }
   }
   static async processMpesa(sms) {
-    let results = Adapters.Mpesa(sms.message);
+
+    console.log("processing with mpesa adapater...")
+
+    let results;
+
+    if (sms.message.includes("Give")) {
+      console.log("Possible deposit detected... Trying deposit first");
+
+      results = Adapters.MpesaDeposit(sms.message);
+      if (results.error) {
+        console.log("Mpesa deposit failed.")
+      } else {
+        sms.adapter = "MPESA-DEPOSIT"
+        console.log("Mpesa deposit suceeded.")
+      }
+
+    }
+
+    if (!results || results.error) {
+      console.log("Trying Mpesa Adapter...")
+      results = Adapters.Mpesa(sms.message);
+    }
+
+    if (results.error) {
+      console.log("mpesa adapter failed. Trying mpesa till adapter...");
+      results = Adapters.MpesaTill(sms.message);
+
+      if (results.error) {
+        console.log("Mpesa till also failed. Trying Deposit")
+
+        if (results.error) {
+          console.log("mpesa adapter failed. Trying mpesa till adapter...");
+          results = Adapters.MpesaDeposit(sms.message);
+          if (results.error) {
+            console.log("Mpesa deposit failed.")
+          } else {
+            sms.adapter = "MPESA-DEPOSIT"
+            console.log("Mpesa deposit suceeded.")
+          }
+        }
+      } else {
+        sms.adapter = "MPESA-TILL"
+        console.log("Mpesa till suceeded.")
+      }
+
+    } else {
+      console.log("mpesa adapter suceeded. proceeding...")
+    }
 
     sms.reference = results.reference;
     sms.amount = results.amount;
@@ -215,7 +307,8 @@ module.exports = class Process {
         senderName: sms.senderName,
         transactionTime: sms.transactionTime,
         error: sms.error,
-      }
+        adapter: sms.adapter
+      },
     );
 
     if (sms.reference && sms.amount && !sms.error) {
@@ -229,7 +322,7 @@ module.exports = class Process {
         {
           status: sms.status,
           results: sms.results,
-        }
+        },
       );
 
       // const saved = await sms.save();
@@ -254,7 +347,7 @@ module.exports = class Process {
         transactionTime: sms.transactionTime,
         error: sms.error,
         otherReference: sms.otherReference,
-      }
+      },
     );
     // await sms.save();
 
@@ -268,7 +361,7 @@ module.exports = class Process {
         {
           status: sms.status,
           results: sms.results,
-        }
+        },
       );
       // await sms.save();
     }
@@ -297,7 +390,7 @@ module.exports = class Process {
         transactionTime: sms.transactionTime,
         error: sms.error,
         account: sms.account,
-      }
+      },
     );
 
     if (sms.reference && sms.amount && !sms.error) {
@@ -311,7 +404,7 @@ module.exports = class Process {
         {
           status: sms.status,
           results: sms.results,
-        }
+        },
       );
 
       // const saved = await sms.save();
@@ -340,7 +433,7 @@ module.exports = class Process {
         transactionTime: sms.transactionTime,
         error: sms.error,
         account: sms.account,
-      }
+      },
     );
 
     if (sms.reference && sms.amount && !sms.error) {
@@ -354,7 +447,7 @@ module.exports = class Process {
         {
           status: sms.status,
           results: sms.results,
-        }
+        },
       );
 
       // const saved = await sms.save();
@@ -362,46 +455,67 @@ module.exports = class Process {
   }
 
   static async send(sms) {
-    // console.log(sms);
-    // const company = await this.getCompany(sms.device.companySID);
-    // console.log("company: ", company);
+    console.log("...................sms....................")
+    console.log(sms);
+    console.log("...................end sms....................")
+    let company = null;
+    if (!sms.device.systemURL) {
+      console.log("-------NO SYSTEM URL. FINDING COMPANY----------")
+      // console.log(sms);
+      company = await this.getCompany(sms.device.companySID);
 
-    // if (!company) {
-    //   sms.status = "PROCESSED";
-    //   sms.results = "FAILED";
-    //   sms.error = "Company Not Found";
+      console.log("company: ", company);
 
-    //   await SMS.updateOne(
-    //     { _id: sms._id },
-    //     {
-    //       status: sms.status,
-    //       results: sms.results,
-    //       error: sms.error,
-    //     }
-    //   );
-    //   // await sms.save();
-    //   return;
-    // }
+      if (!company) {
+        sms.status = "PROCESSED";
+        sms.results = "FAILED";
+        sms.error = "Company Not Found";
 
-    const url = `${'https://jeflo.seadztech.co.ke'}${Config.COMPANY_SMS_POST_PATH}`;
-    
-    // const url = `${'http://192.168.0.64/pharmacy/public'}${Config.COMPANY_SMS_POST_PATH}`;
+        await SMS.updateOne(
+          { _id: sms._id },
+          {
+            status: sms.status,
+            results: sms.results,
+            error: sms.error,
+          },
+        );
+        // await sms.save();
+        return;
+      }
+    }
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(sms),
-    });
+    try {
+      let url = `${sms.device.systemURL}${Config.COMPANY_SMS_POST_PATH}`;
 
-    const results = await response.json();
+      // console.log("URL TO THE APPLICATION: ", url);
 
-    sms.responseBody = JSON.stringify(results);
+      if (!sms.device.systemURL && company) {
+        url = `${company.url}${Config.COMPANY_SMS_POST_PATH}`;
+      }
 
-    sms.attempts = sms.attempts ? sms.attempts + 1 : 1;
+      console.log("URL TO THE APPLICATION: ", url);
 
-    sms.status = response.ok ? "PROCESSED" : "PENDING_SEND";
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(sms),
+      });
+
+      const results = await response.json();
+
+      sms.responseBody = JSON.stringify(results);
+
+      sms.attempts = sms.attempts ? sms.attempts + 1 : 1;
+
+      sms.status = response.ok ? "PROCESSED" : "PENDING_SEND";
+    } catch (error) {
+      console.error("Error Sending Transaction: ", error, error.message);
+
+      sms.status = "PENDING_SEND";
+    }
 
     // await sms.save();
     await SMS.updateOne(
@@ -410,17 +524,48 @@ module.exports = class Process {
         responseBody: sms.responseBody,
         attempts: sms.attempts,
         status: sms.status,
-      }
+      },
     );
   }
 
+  // static async getCompany(SID) {
+  //   try {
+  //     const url = `${Config.COMPANY_GET_URL}/${SID}`;
+
+  //     const requestResponse = await fetch(url);
+
+  //     const result = await requestResponse.json();
+
+  //     return result;
+  //   } catch (error) {
+  //     console.error("Error Getting Company: ", error);
+  //   }
+  // }
+
   static async getCompany(SID) {
-    const url = `${Config.COMPANY_GET_URL}/${SID}`;
+    try {
+        const companies = [
+            {
+                id: 1,
+                title: "GANDWI",
+                url: "https://rms.seadztech.co.ke/api",
+               
+            },
+            {
+                id: 2,
+                title: "SAMMYTECH",
+                url: "https://pos.seadztech.co.ke/api",
+               
+            },
+        ];
 
-    const requestResponse = await fetch(url);
+        const company = companies.find(
+            (company) => company.id === Number(SID)
+        );
 
-    const result = await requestResponse.json();
-
-    return result;
-  }
+        return company;
+    } catch (error) {
+        console.error("Error Getting Company: ", error);
+    }
+}
 };

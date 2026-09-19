@@ -4,7 +4,8 @@ module.exports = function Mpesa(message) {
     const normalizedMessage = message.trim().replace(/\s+/g, " ");
 
     const referencePattern = /^(\w+)/; // Extracts the first word (reference code)
-    const senderPattern = /from\s+([\w\s]+?)(?:\s+(\d{10}))?\s+on/; // Extracts sender's name and optionally phone number
+    // const senderPattern = /from\s+([\w\s]+?)(?:\s+(\d{10}))?\s+on/; // Extracts sender's name and optionally phone number
+    const senderPattern = /from\s+([\w\s]+?)(?:\s+(\d{4}\*{3}\d{3}|\d{10}))?\s+on/;
     const timePattern =
       /on\s+(\d{1,2}\/\d{1,2}\/\d{2})\s+at\s+([\d:]+\s*[APMapm]{2})/; // Extracts date and time
     const amountPattern = /received\s+Ksh\s*([\d,.]+)/i; // Extracts transaction amount
