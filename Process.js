@@ -557,7 +557,7 @@ module.exports = class Process {
             },
             {
                 id: 2,
-                title: "SAMMYTECH",
+                title: "SammyTech",
                 url: "https://pos.seadztech.co.ke/api",
                
             },
